@@ -1,0 +1,128 @@
+---
+title: "Reproducable Research Project 2: Analysis of US Storm Data By Event Type and Impact"
+author: "jwismer"
+date: "Sunday, November 23, 2014"
+output: html_document
+---
+
+## Synopsis
+There is anecdotal evidence that the frequency and severity of storms have been increasing over time,
+possibly due to global warming impact. 
+
+Lessening the impact by careful planning may lower the severe nature of the outcomes.  
+
+This analysis seeks to identify the most impactful types of weather related events based on
+storm data information collected by the National Weather Service (NWS).
+
+This study explores the U.S. National Oceanic Atmospheric Administration's (NOAA) storm
+database.  This database tracks storm severty factors for major storms across the United States.
+
+Data coverage of weather events in the database starts in 1950 and ends in November 2011, with coverage
+of the more recents years being considered more complete.
+
+This study looks at the following variables associated with each weather observation:
+
+1. EVTYPE:      Catigorical variable identifying the type of weather related event
+2. FATALITIES:  numerical variable providing the number of deaths due to the specific event
+3. INJURIES:    numerical variable providing the number of injuries due to the specific event
+4. PROPDMG:     numerical variable providing an estimate of the amount of property damage due to the specific event
+5. CROPDMG:     numerical variable providing an estimate of the amount of crop damage due to the specific event
+
+## Data Processing
+
+### Load the database
+Retrieve and load the NOAA database, from the URL:
+https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2
+
+```{r, echo=TRUE}
+# get the data file
+url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+
+# Load and preprocess the data
+# assume zip file has been downloaded already
+filename <- "./repdata-data-StormData.csv.bz2"
+
+#download unzip the file if found
+if (!file.exists(filename)) {
+    download.file(url, filename)
+}
+
+#conditionally load the dataset
+if (!exists("stormData")) {
+    stormData <- read.csv(bzfile(filename))
+}
+
+#subset to just the factors needed for the analysis
+eventImpact <- stormData[ , c("EVTYPE", "FATALITIES", "INJURIES", 
+                               "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")]
+```
+
+### Aggregate the Data by Weather Event Type
+We will group the data by event type to sum over specific variables considered for the study.
+
+```{r, echo=TRUE}
+#aggregate factors associated the harmful impact, by event type
+fatality_agg <- aggregate(FATALITIES ~ EVTYPE, data=eventImpact, FUN="sum")
+injury_agg   <- aggregate(INJURIES   ~ EVTYPE, data=eventImpact, FUN="sum")
+#aggregate factors associated the highest economic impact, by event type
+propdmg_agg <- aggregate(PROPDMG ~ EVTYPE, data=eventImpact, FUN="sum")
+cropdmg_agg   <- aggregate(CROPDMG   ~ EVTYPE, data=eventImpact, FUN="sum")
+```
+
+## Results
+
+### Question 1
+**Across the US, which type of events (as indicated by the EVTYPE variable) are
+most harmfull with respect to population?**
+
+Top 6 fatal event types:  
+```{r, echo=TRUE}
+fatality_agg[head(order(fatality_agg$FATALITIES, decreasing = TRUE)), ]
+```
+
+Top 6 injurous event types:
+```{r, echo=TRUE}
+injury_agg[head(order(injury_agg$INJURIES, decreasing = TRUE)), ]
+```
+Plot of Most Harmful Storm Types
+```{r, echo=TRUE, fig.height=10, fig.width=10}
+par(mfrow = c(2,1))
+barplot(fatality_agg[head(order(fatality_agg$FATALITIES, decreasing = TRUE)), "FATALITIES"], 
+        names.arg=fatality_agg[head(order(fatality_agg$FATALITIES, decreasing = TRUE)), "EVTYPE"],
+        main="Total Fatalities by Weather Event Type: Top 6 Most Fatal", ylab="Total Fatalities")
+barplot(injury_agg[head(order(injury_agg$INJURIES, decreasing = TRUE)), "INJURIES"], 
+        names.arg=injury_agg[head(order(injury_agg$INJURIES, decreasing = TRUE)), "EVTYPE"],
+        main="Total Injuries by Weather Event Type: Top 6 Most Injurous", ylab="Total Injuries")
+```
+
+As we can see from the above plot, the **Tornado** event type is by far the most harmful, 
+within the US.
+
+### Question 2
+**Across the US, which types of events have the greatest economic impact?**
+
+Top 6 property damaging event types
+```{r, echo=TRUE}
+propdmg_agg[head(order(propdmg_agg$PROPDMG, decreasing = TRUE)), ]
+```
+
+Top 6 crop damaging event types
+```{r, echo=TRUE}
+cropdmg_agg[head(order(cropdmg_agg$CROPDMG, decreasing = TRUE)), ]
+```
+
+Plot of Most Impactful Storm Types
+```{r, echo=TRUE, fig.height=10, fig.width=10}
+par(mfrow = c(2,1))
+barplot(propdmg_agg[head(order(propdmg_agg$PROPDMG, decreasing = TRUE)), "PROPDMG"], 
+        names.arg=propdmg_agg[head(order(propdmg_agg$PROPDMG, decreasing = TRUE)), "EVTYPE"],
+        main="Total Property Damage by Weather Event Type: Top 6 Most Damaging", ylab="Total Damage")
+barplot(cropdmg_agg[head(order(cropdmg_agg$CROPDMG, decreasing = TRUE)), "CROPDMG"], 
+        names.arg=cropdmg_agg[head(order(cropdmg_agg$CROPDMG, decreasing = TRUE)), "EVTYPE"],
+        main="Total Crop Damage by Weather Event Type: Top 6 Most Damaging", ylab="Total Damage")
+
+```
+
+The answer to this question is not clear cut.  If one is concerned about an urban area, then planning
+for a **Tornadic** event would be more beneficial than planning for a **Hail** event.  
+However, in a rural area where farming is occuring, concern for a Hail event may be more prudant.
